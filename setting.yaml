@@ -1,0 +1,4 @@
+# logに関する設定
+log:
+  enable: true
+  filepath: "kkt_log.log"
