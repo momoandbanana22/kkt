@@ -2,3 +2,6 @@
 log:
   enable: true
   filepath: "kkt_log.log"
+
+# 周期(秒)
+interval: 3600
