@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180419_1012'.freeze
+PROGRAM_VERSION = 'ver.20180427_2220'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -18,6 +18,33 @@ LOG.enable = SETTING['log']['enable']
 
 # write info of program start.
 LOG.info(object_id, 'main', 'main', (PROGRAM_NAME + ' ' + PROGRAM_VERSION))
+
+# read coinpair/side from setting file
+def coinpair_and_side
+  # read setting
+  bitbank_coinpair = SETTING['bitbank_coinpair']
+  base_coinname = SETTING['base_coin']['coin_name']
+  target_coinname = SETTING['target_coin']['coin_name']
+
+  # check pair BASE_TARGET
+  pair = base_coinname + '_' + target_coinname
+  return [pair, 'sell'] if bitbank_coinpair.include?(pair)
+
+  # check pair TARGET_BASE
+  pair = target_coinname + '_' + base_coinname
+  return [pair, 'buy'] if bitbank_coinpair.include?(pair)
+
+  # not found
+  [nil, nil] # return nil, nil
+end
+
+coinpair, side = coinpair_and_side
+if coinpair.nil?
+  LOG.error(object_id, 'main', 'main', 'no coinpair found.')
+  puts('コインペアが見つかりません')
+  exit(-1)
+end
+LOG.debug(object_id, 'main', 'main', 'coinpair=' + coinpair + ' side=' + side)
 
 def alreadybuy(current_unixtime, interval)
   lastbuy = YAML.load_file('lastbuy.yaml')

@@ -3,5 +3,19 @@ log:
   enable: true
   filepath: "kkt_log.log"
 
-# 周期(秒)
+# 周期(秒)：何秒ごとに購入するか？
 interval: 3600
+
+# bitbankで取扱のあるコインペアの一覧
+bitbank_coinpair: ["btc_jpy", "xrp_jpy", "ltc_btc", "eth_btc", "mona_jpy", "mona_btc", "bcc_jpy", "bcc_btc"]
+
+# 注意：下記のbase_coinのcoin_nameとtarget_coinのcoin_nameは、bitbankで取扱のあるコインペアとなるように設定する必要があります。
+
+# ベースコイン：売却するコイン
+base_coin:
+  coin_name: "jpy"
+  coin_amount: 40
+
+# ターゲットコイン：購入するコイン
+target_coin:
+  coin_name: "xrp"
