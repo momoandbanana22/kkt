@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180428_1100'.freeze
+PROGRAM_VERSION = 'ver.20180428_2000'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
