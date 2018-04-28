@@ -42,34 +42,57 @@ def coinpair_and_side
   [nil, nil] # return nil, nil
 end
 
-coinpair, side = coinpair_and_side
-if coinpair.nil?
+COINPAIR, SIDE = coinpair_and_side
+if COINPAIR.nil?
   LOG.error(object_id, 'main', 'main', 'no coinpair found. program end.')
   puts('設定ファイルに記述されたコインペアが正しくありません。プログラムを終了しました。')
   exit(-1)
 end
-LOG.debug(object_id, 'main', 'main', 'coinpair=' + coinpair + ' side=' + side)
+LOG.debug(object_id, 'main', 'main', 'coinpair=' + COINPAIR + ' side=' + SIDE)
 
 # initialize Bitbankcc Class
 APIKEY = YAML.load_file('apikey.yaml')
 BBCC = Bitbankcc.new(APIKEY['apikey'], APIKEY['seckey'])
 
+RANDOM = Random.new
+def random_sleep
+  sleep(RANDOM.rand(1.0) + 1)
+end
+
+##########
+# balance
+##########
+
+def api_read_balance
+  JSON.parse(BBCC.read_balance)
+rescue StandardError => exception
+  LOG.fatal(object_id, self.class.name, __method__, exception.to_s)
+  nil # return nil
+end
+
+def retry_read_balance
+  res = nil
+  loop do
+    res = api_read_balance
+    break unless res.nil?
+    random_sleep
+  end
+  res # return res
+end
+
 def raw_read_balance
-  res = JSON.parse(BBCC.read_balance())
+  res = retry_read_balance
   if res['success'] != 1
     errstr = 'BBCC.read_balance() not success. code=' + res['data']['code'].to_s
     LOG.error(object_id, self.class.name, __method__, errstr)
     return nil
   end
   res # return res
-rescue => exception
-  LOG.fatal(object_id, self.class.name, __method__, exception.to_s)
-  nil # return nil
 end
 
 def read_amount
-  res = raw_read_balance
   ret = Hash.new { |h, k| h[k] = {} }
+  res = raw_read_balance
   res['data']['assets'].each do |one_asset|
     one_asset.each do |key, val|
       ret[one_asset['asset']][key] = val if key != 'asset'
@@ -82,7 +105,78 @@ def free_amout(target_coin)
   read_amount[target_coin]['free_amount']
 end
 
-puts(BASE_COINNAME + ' の残高は ' + free_amout(BASE_COINNAME).to_s + ' です。')
+########
+# price
+########
+
+def api_get_price
+  JSON.parse(BBCC.read_ticker(COINPAIR))
+rescue StandardError => exception
+  LOG.fatal(object_id, self.class.name, __method__, exception.to_s)
+  nil # return nil
+end
+
+def retry_get_price
+  res = nil
+  loop do
+    res = api_get_price
+    break unless res.nil?
+    random_sleep
+  end
+  res # return res
+end
+
+def price
+  ret = {} # empty hash
+  res = retry_get_price
+  res['data'].each do |key, val|
+    ret[key] = val if key != 'success'
+  end
+  ret # retrun ret
+end
+
+def target_price
+  return(price['last']) if SIDE == 'buy'
+  1 / price['last']
+end
+
+########
+# order
+########
+
+def api_create_order(pair, amount, price, side)
+  JSON.parse(BBCC.create_order(pair, amount, price, side, 'market'))
+rescue StandardError => exception
+  LOG.fatal(object_id, self.class.name, __method__, exception.to_s)
+  nil # return nil
+end
+
+def retry_create_order(pair, amount, price, side)
+  res = nil
+  loop do
+    res = api_create_order(pair, amount, price, side)
+    break unless res.nil?
+    random_sleep
+  end
+  res # return res
+end
+
+def raw_create_order(pair, amount, price, side)
+  res = retry_create_order(pair, amount, price, side)
+  if res['success'] != 1
+    errstr = 'BBCC.create_order() not success. code=' + res['data']['code'].to_s
+    LOG.error(object_id, self.class.name, __method__, errstr)
+    return nil
+  end
+  res # return res
+end
+
+puts(BASE_COINNAME + ' の残高は ' +
+  free_amout(BASE_COINNAME).to_s +
+  ' [' + BASE_COINNAME + '] です。')
+puts(TARGET_COINNAME + ' の価格は ' +
+  target_price.to_s +
+  ' [' + BASE_COINNAME + '] です。')
 
 def alreadybuy(current_unixtime, interval)
   lastbuy = YAML.load_file('lastbuy.yaml')
@@ -93,18 +187,16 @@ def alreadybuy(current_unixtime, interval)
   (lastbuy_datetime == current_unixtime) # return true/false
 end
 
-def buy
+def save_last_trading(target_coinname, amout, price)
   lastbuytime = Time.now
-  puts lastbuytime
   lastbuy = {}
   lastbuy['unixtime'] = lastbuytime.to_i
-  lastbuy['coinname'] = 'xrp'
-  lastbuy['amout'] = 1
-  lastbuy['price'] = 100
+  lastbuy['coinname'] = target_coinname
+  lastbuy['amout'] = amout
+  lastbuy['price'] = price
   File.open('lastbuy.yaml', 'w') do |f|
     YAML.dump(lastbuy, f)
   end
-  LOG.debug(object_id, self.class.name, __method__, '買ったふり')
 end
 
 # loop do
