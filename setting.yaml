@@ -14,7 +14,9 @@ bitbank_coinpair: ["btc_jpy", "xrp_jpy", "ltc_btc", "eth_btc", "mona_jpy", "mona
 # ベースコイン：売却するコイン
 base_coin:
   coin_name: "jpy"
-  coin_amount: 40
+  # 使う金額。（保持量＋売却量）以上の残高がある場合にのみ、売却量を売却する。
+  use_amount: 40  # 売却量
+  keep_amout: 0   # 保持量
 
 # ターゲットコイン：購入するコイン
 target_coin:
