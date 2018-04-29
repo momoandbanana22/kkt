@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180429_1228'.freeze
+PROGRAM_VERSION = 'ver.20180429_1612'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -168,6 +168,8 @@ def alreadybuy(current_unixtime, interval)
   lastbuy_datetime = lastbuy['unixtime'].to_i.div(interval)
   current_unixtime = current_unixtime.div(interval)
   (lastbuy_datetime == current_unixtime) # return true/false
+rescue StandardError
+  false # return false
 end
 
 # save last trading info to yaml file
@@ -200,7 +202,8 @@ if COINPAIR.nil?
   puts('設定ファイルに記述されたコインペアが正しくありません。プログラムを終了しました。')
   exit(-1)
 end
-LOG.debug(object_id, 'main', 'main', 'setting : coinpair=' + COINPAIR + ' side=' + SIDE)
+LOG.debug(object_id, 'main', 'main', 'setting : coinpair=' +
+  COINPAIR + ' side=' + SIDE)
 
 # initialize Bitbankcc Class
 APIKEY = YAML.load_file('apikey.yaml')
@@ -237,7 +240,7 @@ loop do
   puts(tmpstr)
 
   # order
-  raw_create_order(COINPAIR, target_amount, tmp_target_price, SIDE)
+  redo if raw_create_order(COINPAIR, target_amount, tmp_target_price, SIDE).nil?
   # update 'lastbuy.yaml'
   save_last_trading(TARGET_COINNAME, target_amount, tmp_target_price)
 end
