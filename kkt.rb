@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180429_1200'.freeze
+PROGRAM_VERSION = 'ver.20180429_1228'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -11,6 +11,25 @@ require 'ruby_bitbankcc'
 
 # relateve file
 require_relative 'kkt_logger.rb'
+
+# read setting.yaml file
+SETTING = YAML.load_file('setting.yaml')
+
+# global log class
+LOG = KktLog.new(SETTING['log']['filepath'])
+LOG.enable = SETTING['log']['enable']
+
+# write info of program start.
+LOG.info(object_id, 'main', 'main', (PROGRAM_NAME + ' ' + PROGRAM_VERSION))
+puts(PROGRAM_NAME + ' ' + PROGRAM_VERSION)
+
+BASE_COINNAME = SETTING['base_coin']['coin_name']
+TARGET_COINNAME = SETTING['target_coin']['coin_name']
+
+RANDOM = Random.new
+def random_sleep
+  sleep(RANDOM.rand(1.0) + 1)
+end
 
 ##########
 # balance
@@ -164,15 +183,16 @@ def save_last_trading(target_coinname, amout, price)
   end
 end
 
-# read setting.yaml file
-SETTING = YAML.load_file('setting.yaml')
-
-# global log class
-LOG = KktLog.new(SETTING['log']['filepath'])
-LOG.enable = SETTING['log']['enable']
-
-# write info of program start.
-LOG.info(object_id, 'main', 'main', (PROGRAM_NAME + ' ' + PROGRAM_VERSION))
+# wait for order timing
+def wait_loop
+  print('wait...')
+  loop do
+    sleep(0.5)
+    redo if alreadybuy(Time.now.to_i, SETTING['interval'])
+    puts('go!')
+    return
+  end
+end
 
 COINPAIR, SIDE = coinpair_and_side
 if COINPAIR.nil?
@@ -180,30 +200,20 @@ if COINPAIR.nil?
   puts('設定ファイルに記述されたコインペアが正しくありません。プログラムを終了しました。')
   exit(-1)
 end
-LOG.debug(object_id, 'main', 'main', 'coinpair=' + COINPAIR + ' side=' + SIDE)
+LOG.debug(object_id, 'main', 'main', 'setting : coinpair=' + COINPAIR + ' side=' + SIDE)
 
 # initialize Bitbankcc Class
 APIKEY = YAML.load_file('apikey.yaml')
 BBCC = Bitbankcc.new(APIKEY['apikey'], APIKEY['seckey'])
 
-RANDOM = Random.new
-def random_sleep
-  sleep(RANDOM.rand(1.0) + 1)
-end
-
-BASE_COINNAME = SETTING['base_coin']['coin_name']
-TARGET_COINNAME = SETTING['target_coin']['coin_name']
-
 # main loop
 loop do
-  # wait...
-  sleep(0.5)
-  redo unless alreadybuy(Time.now.to_i, SETTING['interval'])
+  wait_loop
 
   # check amout
   tmp_target_price = target_price # api access
   base_free_amount = free_amout(BASE_COINNAME).to_f # api access
-  base_use_amount = SETTING['use_amount']
+  base_use_amount = SETTING['base_coin']['use_amount'].to_f
   base_keep_amount = SETTING['base_coin']['keep_amount'].to_f
   if (base_free_amount - base_keep_amount) < base_use_amount
     tmpstr = Time.now.to_s + ' 残高が足りないので、プログラムを終了します。'
@@ -214,7 +224,7 @@ loop do
   end
 
   # calc amout
-  target_amount = base_use_amount / tmp_target_price
+  target_amount = base_use_amount.to_f / tmp_target_price.to_f
 
   # display
   tmpstr = Time.now.to_s + ' ' + BASE_COINNAME + ' の残高は '
@@ -227,7 +237,6 @@ loop do
   puts(tmpstr)
 
   # order
-  target_amount = base_use_amount / tmp_target_price
   raw_create_order(COINPAIR, target_amount, tmp_target_price, SIDE)
   # update 'lastbuy.yaml'
   save_last_trading(TARGET_COINNAME, target_amount, tmp_target_price)
