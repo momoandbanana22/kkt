@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180428_2000'.freeze
+PROGRAM_VERSION = 'ver.20180429_1200'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -11,53 +11,6 @@ require 'ruby_bitbankcc'
 
 # relateve file
 require_relative 'kkt_logger.rb'
-
-# read setting.yaml filr
-SETTING = YAML.load_file('setting.yaml')
-
-# global log class
-LOG = KktLog.new(SETTING['log']['filepath'])
-LOG.enable = SETTING['log']['enable']
-
-# write info of program start.
-LOG.info(object_id, 'main', 'main', (PROGRAM_NAME + ' ' + PROGRAM_VERSION))
-
-BASE_COINNAME = SETTING['base_coin']['coin_name']
-TARGET_COINNAME = SETTING['target_coin']['coin_name']
-
-# read coinpair/side from setting file
-def coinpair_and_side
-  # read setting
-  bitbank_coinpair = SETTING['bitbank_coinpair']
-
-  # check pair BASE_TARGET
-  pair = BASE_COINNAME + '_' + TARGET_COINNAME
-  return [pair, 'sell'] if bitbank_coinpair.include?(pair)
-
-  # check pair TARGET_BASE
-  pair = TARGET_COINNAME + '_' + BASE_COINNAME
-  return [pair, 'buy'] if bitbank_coinpair.include?(pair)
-
-  # not found
-  [nil, nil] # return nil, nil
-end
-
-COINPAIR, SIDE = coinpair_and_side
-if COINPAIR.nil?
-  LOG.error(object_id, 'main', 'main', 'no coinpair found. program end.')
-  puts('設定ファイルに記述されたコインペアが正しくありません。プログラムを終了しました。')
-  exit(-1)
-end
-LOG.debug(object_id, 'main', 'main', 'coinpair=' + COINPAIR + ' side=' + SIDE)
-
-# initialize Bitbankcc Class
-APIKEY = YAML.load_file('apikey.yaml')
-BBCC = Bitbankcc.new(APIKEY['apikey'], APIKEY['seckey'])
-
-RANDOM = Random.new
-def random_sleep
-  sleep(RANDOM.rand(1.0) + 1)
-end
 
 ##########
 # balance
@@ -171,13 +124,24 @@ def raw_create_order(pair, amount, price, side)
   res # return res
 end
 
-puts(BASE_COINNAME + ' の残高は ' +
-  free_amout(BASE_COINNAME).to_s +
-  ' [' + BASE_COINNAME + '] です。')
-puts(TARGET_COINNAME + ' の価格は ' +
-  target_price.to_s +
-  ' [' + BASE_COINNAME + '] です。')
+# read coinpair/side from setting file
+def coinpair_and_side
+  # read setting
+  bitbank_coinpair = SETTING['bitbank_coinpair']
 
+  # check pair BASE_TARGET
+  pair = BASE_COINNAME + '_' + TARGET_COINNAME
+  return [pair, 'sell'] if bitbank_coinpair.include?(pair)
+
+  # check pair TARGET_BASE
+  pair = TARGET_COINNAME + '_' + BASE_COINNAME
+  return [pair, 'buy'] if bitbank_coinpair.include?(pair)
+
+  # not found
+  [nil, nil] # return nil, nil
+end
+
+# check alread buy
 def alreadybuy(current_unixtime, interval)
   lastbuy = YAML.load_file('lastbuy.yaml')
   return false if lastbuy.nil?
@@ -187,6 +151,7 @@ def alreadybuy(current_unixtime, interval)
   (lastbuy_datetime == current_unixtime) # return true/false
 end
 
+# save last trading info to yaml file
 def save_last_trading(target_coinname, amout, price)
   lastbuytime = Time.now
   lastbuy = {}
@@ -199,8 +164,72 @@ def save_last_trading(target_coinname, amout, price)
   end
 end
 
-# loop do
-#  current_unixtime = Time.now.to_i
-#  buy unless alreadybuy(current_unixtime, SETTING['interval'])
-#  sleep(0.5)
-# end
+# read setting.yaml file
+SETTING = YAML.load_file('setting.yaml')
+
+# global log class
+LOG = KktLog.new(SETTING['log']['filepath'])
+LOG.enable = SETTING['log']['enable']
+
+# write info of program start.
+LOG.info(object_id, 'main', 'main', (PROGRAM_NAME + ' ' + PROGRAM_VERSION))
+
+COINPAIR, SIDE = coinpair_and_side
+if COINPAIR.nil?
+  LOG.error(object_id, 'main', 'main', 'no coinpair found. program end.')
+  puts('設定ファイルに記述されたコインペアが正しくありません。プログラムを終了しました。')
+  exit(-1)
+end
+LOG.debug(object_id, 'main', 'main', 'coinpair=' + COINPAIR + ' side=' + SIDE)
+
+# initialize Bitbankcc Class
+APIKEY = YAML.load_file('apikey.yaml')
+BBCC = Bitbankcc.new(APIKEY['apikey'], APIKEY['seckey'])
+
+RANDOM = Random.new
+def random_sleep
+  sleep(RANDOM.rand(1.0) + 1)
+end
+
+BASE_COINNAME = SETTING['base_coin']['coin_name']
+TARGET_COINNAME = SETTING['target_coin']['coin_name']
+
+# main loop
+loop do
+  # wait...
+  sleep(0.5)
+  redo unless alreadybuy(Time.now.to_i, SETTING['interval'])
+
+  # check amout
+  tmp_target_price = target_price # api access
+  base_free_amount = free_amout(BASE_COINNAME).to_f # api access
+  base_use_amount = SETTING['use_amount']
+  base_keep_amount = SETTING['base_coin']['keep_amount'].to_f
+  if (base_free_amount - base_keep_amount) < base_use_amount
+    tmpstr = Time.now.to_s + ' 残高が足りないので、プログラムを終了します。'
+    tmpstr += ' (' + base_free_amount.to_s + ' [' + BASE_COINNAME + '] )'
+    LOG.info(object_id, self.class.name, __method__, tmpstr)
+    puts(tmpstr)
+    break # exit loop
+  end
+
+  # calc amout
+  target_amount = base_use_amount / tmp_target_price
+
+  # display
+  tmpstr = Time.now.to_s + ' ' + BASE_COINNAME + ' の残高は '
+  tmpstr += base_free_amount.to_s + ' [' + BASE_COINNAME + '] です。'
+  tmpstr += TARGET_COINNAME + ' の価格は '
+  tmpstr += tmp_target_price.to_s + ' [' + BASE_COINNAME + '] です。'
+  tmpstr += TARGET_COINNAME + ' の購入数量は '
+  tmpstr += target_amount.to_s + 'です。'
+  LOG.info(object_id, self.class.name, __method__, tmpstr)
+  puts(tmpstr)
+
+  # order
+  target_amount = base_use_amount / tmp_target_price
+  raw_create_order(COINPAIR, target_amount, tmp_target_price, SIDE)
+  # update 'lastbuy.yaml'
+  save_last_trading(TARGET_COINNAME, target_amount, tmp_target_price)
+end
+puts('プログラムを終了しました。')
