@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180429_1612'.freeze
+PROGRAM_VERSION = 'ver.20180429_1844'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -65,6 +65,7 @@ end
 def read_amount
   ret = Hash.new { |h, k| h[k] = {} }
   res = raw_read_balance
+  return ret if res.nil?
   res['data']['assets'].each do |one_asset|
     one_asset.each do |key, val|
       ret[one_asset['asset']][key] = val if key != 'asset'
@@ -74,7 +75,9 @@ def read_amount
 end
 
 def free_amout(target_coin)
-  read_amount[target_coin]['free_amount']
+  tmp = read_amount
+  return 0 if tmp.nil?
+  tmp[target_coin]['free_amount']
 end
 
 ########
@@ -98,9 +101,20 @@ def retry_get_price
   res # return res
 end
 
+def raw_get_price
+  res = retry_get_price
+  if res['success'] != 1
+    errstr = 'BBCC.read_ticker() not success. code=' + res['data']['code'].to_s
+    LOG.error(object_id, self.class.name, __method__, errstr)
+    return nil
+  end
+  res # return res
+end
+
 def price
   ret = {} # empty hash
-  res = retry_get_price
+  res = raw_get_price
+  return ret if res.nil?
   res['data'].each do |key, val|
     ret[key] = val if key != 'success'
   end
@@ -108,8 +122,10 @@ def price
 end
 
 def target_price
-  return(price['last']) if SIDE == 'buy'
-  1 / price['last']
+  tmp = price
+  return 0 if tmp.nil?
+  return(tmp['last']) if SIDE == 'buy'
+  1 / tmp['last']
 end
 
 ########
@@ -240,7 +256,9 @@ loop do
   puts(tmpstr)
 
   # order
-  redo if raw_create_order(COINPAIR, target_amount, tmp_target_price, SIDE).nil?
+  loop do
+    break unless raw_create_order(COINPAIR, target_amount, tmp_target_price, SIDE).nil?
+  end
   # update 'lastbuy.yaml'
   save_last_trading(TARGET_COINNAME, target_amount, tmp_target_price)
 end
