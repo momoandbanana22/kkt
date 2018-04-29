@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180429_1844'.freeze
+PROGRAM_VERSION = 'ver.20180430_0057'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -28,7 +28,7 @@ TARGET_COINNAME = SETTING['target_coin']['coin_name']
 
 RANDOM = Random.new
 def random_sleep
-  sleep(RANDOM.rand(1.0) + 1)
+  sleep(RANDOM.rand(1.0) + 1.5) # 1.5[sec] - 2.5[sec]
 end
 
 ##########
@@ -55,7 +55,7 @@ end
 def raw_read_balance
   res = retry_read_balance
   if res['success'] != 1
-    errstr = 'BBCC.read_balance() not success. code=' + res['data']['code'].to_s
+    errstr = "BBCC.read_balance() not success. code=#{res['data']['code']}"
     LOG.error(object_id, self.class.name, __method__, errstr)
     return nil
   end
@@ -104,7 +104,7 @@ end
 def raw_get_price
   res = retry_get_price
   if res['success'] != 1
-    errstr = 'BBCC.read_ticker() not success. code=' + res['data']['code'].to_s
+    errstr = "BBCC.read_ticker() not success. code=#{res['data']['code']}"
     LOG.error(object_id, self.class.name, __method__, errstr)
     return nil
   end
@@ -121,7 +121,7 @@ def price
   ret # retrun ret
 end
 
-def target_price
+def read_target_price
   tmp = price
   return 0 if tmp.nil?
   return(tmp['last']) if SIDE == 'buy'
@@ -132,27 +132,27 @@ end
 # order
 ########
 
-def api_create_order(pair, amount, price, side)
-  JSON.parse(BBCC.create_order(pair, amount, price, side, 'market'))
+def api_create_order(pair, amount, price, side, type)
+  JSON.parse(BBCC.create_order(pair, amount, price, side, type))
 rescue StandardError => exception
   LOG.fatal(object_id, self.class.name, __method__, exception.to_s)
   nil # return nil
 end
 
-def retry_create_order(pair, amount, price, side)
+def retry_create_order(pair, amount, price, side, type)
   res = nil
   loop do
-    res = api_create_order(pair, amount, price, side)
+    res = api_create_order(pair, amount, price, side, type)
     break unless res.nil?
     random_sleep
   end
   res # return res
 end
 
-def raw_create_order(pair, amount, price, side)
-  res = retry_create_order(pair, amount, price, side)
+def raw_create_order(pair, amount, price, side, type)
+  res = retry_create_order(pair, amount, price, side, type)
   if res['success'] != 1
-    errstr = 'BBCC.create_order() not success. code=' + res['data']['code'].to_s
+    errstr = "BBCC.create_order() not success. code=#{res['data']['code']}"
     LOG.error(object_id, self.class.name, __method__, errstr)
     return nil
   end
@@ -189,13 +189,14 @@ rescue StandardError
 end
 
 # save last trading info to yaml file
-def save_last_trading(target_coinname, amout, price)
+def save_last_trading(target_coinname, amout, price, type)
   lastbuytime = Time.now
   lastbuy = {}
   lastbuy['unixtime'] = lastbuytime.to_i
   lastbuy['coinname'] = target_coinname
   lastbuy['amout'] = amout
   lastbuy['price'] = price
+  lastbuy['type'] = type
   File.open('lastbuy.yaml', 'w') do |f|
     YAML.dump(lastbuy, f)
   end
@@ -212,10 +213,46 @@ def wait_loop
   end
 end
 
+# make limig log str
+def limit_log_str(target_price, target_limit_price)
+  tmpstr = "#{Time.now} #{TARGET_COINNAME} の価格が "
+  tmpstr += "#{target_price} [#{BASE_COINNAME}] で、 "
+  tmpstr += "#{target_limit_price} [#{BASE_COINNAME}] を超えています。"
+  tmpstr # return tmpstr
+end
+
+# check limit price
+def limit_price(target_price, target_limit_price)
+  ret_type = 'market'
+  ret_target_price = target_price
+  if target_price > target_limit_price
+    tmpstr = limit_log_str(target_price, target_limit_price)
+    LOG.info(object_id, self.class.name, __method__, tmpstr)
+    puts(tmpstr)
+    ret_type = 'limit'
+    ret_target_price = target_limit_price
+  end
+  [ret_type, ret_target_price] # return ret_type, ret_target_price
+end
+
+# make log string
+def order_log_str(base_free_amount, target_price, target_amount, type)
+  tmpstr = "#{Time.now} #{BASE_COINNAME} の残高は #{base_free_amount} "
+  tmpstr += "[#{BASE_COINNAME}] です。"
+  tmpstr += "#{TARGET_COINNAME} の価格は #{target_price} [#{BASE_COINNAME}] です。"
+  tmpstr += "#{TARGET_COINNAME} の購入数量は #{target_amount} です。"
+  tmpstr += "注文は #{type} です。"
+  tmpstr # retrun tmpstr
+end
+
 COINPAIR, SIDE = coinpair_and_side
 if COINPAIR.nil?
-  LOG.error(object_id, 'main', 'main', 'no coinpair found. program end.')
-  puts('設定ファイルに記述されたコインペアが正しくありません。プログラムを終了しました。')
+  LOG.error(
+    object_id,
+    'main',
+    'main',
+    '設定ファイルに記述されたコインペアが正しくありません。プログラムを終了しました。'
+  )
   exit(-1)
 end
 LOG.debug(object_id, 'main', 'main', 'setting : coinpair=' +
@@ -225,41 +262,48 @@ LOG.debug(object_id, 'main', 'main', 'setting : coinpair=' +
 APIKEY = YAML.load_file('apikey.yaml')
 BBCC = Bitbankcc.new(APIKEY['apikey'], APIKEY['seckey'])
 
+base_use_amount = SETTING['base_coin']['use_amount'].to_f
+base_keep_amount = SETTING['base_coin']['keep_amount'].to_f
+target_limit_price = SETTING['target_coin']['limit_price'].to_f
+
 # main loop
 loop do
   wait_loop
 
   # check amout
-  tmp_target_price = target_price # api access
+  target_price = read_target_price.to_f # api access
   base_free_amount = free_amout(BASE_COINNAME).to_f # api access
-  base_use_amount = SETTING['base_coin']['use_amount'].to_f
-  base_keep_amount = SETTING['base_coin']['keep_amount'].to_f
   if (base_free_amount - base_keep_amount) < base_use_amount
-    tmpstr = Time.now.to_s + ' 残高が足りないので、プログラムを終了します。'
-    tmpstr += ' (' + base_free_amount.to_s + ' [' + BASE_COINNAME + '] )'
+    tmpstr = "#{Time.now}  残高が足りないので、プログラムを終了します。"
+    tmpstr += "(#{base_free_amount} [#{BASE_COINNAME}])"
     LOG.info(object_id, self.class.name, __method__, tmpstr)
     puts(tmpstr)
     break # exit loop
   end
 
-  # calc amout
-  target_amount = base_use_amount.to_f / tmp_target_price.to_f
+  # order type and price
+  type, target_price = limit_price(target_price, target_limit_price)
 
-  # display
-  tmpstr = Time.now.to_s + ' ' + BASE_COINNAME + ' の残高は '
-  tmpstr += base_free_amount.to_s + ' [' + BASE_COINNAME + '] です。'
-  tmpstr += TARGET_COINNAME + ' の価格は '
-  tmpstr += tmp_target_price.to_s + ' [' + BASE_COINNAME + '] です。'
-  tmpstr += TARGET_COINNAME + ' の購入数量は '
-  tmpstr += target_amount.to_s + 'です。'
-  LOG.info(object_id, self.class.name, __method__, tmpstr)
-  puts(tmpstr)
+  # calc amout
+  target_amount = base_use_amount.to_f / target_price
 
   # order
   loop do
-    break unless raw_create_order(COINPAIR, target_amount, tmp_target_price, SIDE).nil?
+    break unless raw_create_order(
+      COINPAIR,
+      target_amount,
+      target_price,
+      SIDE,
+      type
+    ).nil?
   end
+
   # update 'lastbuy.yaml'
-  save_last_trading(TARGET_COINNAME, target_amount, tmp_target_price)
+  save_last_trading(TARGET_COINNAME, target_amount, target_price, type)
+
+  # display & log
+  tmpstr = order_log_str(base_free_amount, target_price, target_amount, type)
+  LOG.info(object_id, self.class.name, __method__, tmpstr)
+  puts(tmpstr)
 end
 puts('プログラムを終了しました。')

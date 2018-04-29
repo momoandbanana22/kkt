@@ -21,3 +21,4 @@ base_coin:
 # ターゲットコイン：購入するコイン
 target_coin:
   coin_name: "xrp"
+  limit_price:  100 # 100[xrp/jpy]を超えたら、成行買いは行わず、指値買いを行う
