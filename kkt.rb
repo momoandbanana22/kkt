@@ -1,10 +1,11 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180430_0057'.freeze
+PROGRAM_VERSION = 'ver.20180430_0927'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
 require 'yaml'
 require 'date'
+require 'bigdecimal'
 
 # use gem
 require 'ruby_bitbankcc'
@@ -240,6 +241,9 @@ def order_log_str(base_free_amount, target_price, target_amount, type)
   tmpstr = "#{Time.now} #{BASE_COINNAME} の残高は #{base_free_amount} "
   tmpstr += "[#{BASE_COINNAME}] です。"
   tmpstr += "#{TARGET_COINNAME} の価格は #{target_price} [#{BASE_COINNAME}] です。"
+  if TARGET_COINNAME == 'xrp'
+    target_amount = BigDecimal(target_amount.to_s).floor(4).to_f
+  end
   tmpstr += "#{TARGET_COINNAME} の購入数量は #{target_amount} です。"
   tmpstr += "注文は #{type} です。"
   tmpstr # retrun tmpstr
