@@ -1,0 +1,152 @@
+﻿<html>
+ <head><title>ruby導入物語</title></head>
+ <body>
+  <h1>この物語はプログラミング初心者がrubyを導入してXRP自動積立botを起動させるまでの(再現)物語です。</h1>
+  <br>
+  <h3>著者：白鳥メグミ</h3><br>
+  <br>
+  （はじまり）<br>
+  <br>
+  4月某日のことです。<br>
+  ZaifではBTC、MONA、NEM、ETHが自動積立できますがXRPでも自動積立ができたらいいなあと私は思っていました。<br>
+  仲良しの桃芭蕉実さんが最近どうやらbitbank用自動売買botを開発に夢中らしいと知った私は<br>
+  これはもしかしたらXRP自動売買botを作ってもらうチャンスなのでは<br>
+  とお願いしてみましたら 桃芭蕉実さんは快く承諾して下さいました。<br>
+  実行するには"ruby"と"gem"を導入しなければならないとのことで<br>
+  この物語は初心者の私が導入に苦労した点をまとめてたものです。<br>
+  初心者がつまずきそうなことが書いてありますので<br>
+  もしかしたらこれからbotを導入する予定もしくは導入したい方には役立つことが書いてあるかもしれません。<br>
+  <br>
+  <h3>環境</h3><br>
+  Windows 8.1(64bit版)<br>
+  <br>
+  <h3>rubyの導入</h3><br>
+  まずは"ruby導入"でググって公式サイトを探します。<br>
+  <a href="https://www.ruby-lang.org/ja/">https://www.ruby-lang.org/ja/</a><br>
+  <br>
+  <img src="20180506_1.jpg"><br>
+  <br>
+  ふむふむ・・・でとりあえず「ダウンロード」をぽちっと。<br>
+  <br>
+  <img src="20180506_2.jpg"><br>
+  <br>
+  「RubyInstaller」をぽちっと。<br>
+  <br>
+  <img src="20180506_3.jpg"><br>
+  <br>
+  「Download」をぽちっ。<br>
+  <br>
+  <img src="20180506_4.jpg"><br>
+  <br>
+  botを動かすのに"devkit"（開発キット）とかいうのが必要か分かりませんでしたので（注：初心者です）<br>
+  とりあえず"WITH"（あり）の方の一番新しいものを選びます。（私のPCは64bit版です）<br>
+  <br>
+  ダウンロードしたファイルを開きます。<br>
+  <br>
+  <img src="20180506_5.jpg"><br>
+  <br>
+  "accept"（承諾）を選びます。<br>
+  <br>
+  <img src="20180506_6.jpg"><br>
+  <br>
+  "PATH"の設定と拡張子".rb"の関連付けのみチェックを入れます。<br>
+  <br>
+  <img src="20180506_7.jpg"><br>
+  <br>
+  "MSYS2"とかよく分かりませんのでチェック外しておきます。（注：初心者）<br>
+  <br>
+  <img src="20180506_8.jpg"><br>
+  <br>
+  これでインストール終了です。やりました！(*´▽｀*)<br>
+  <br>
+  <h3>gemの導入</h3><br>
+  <br>
+  次にgemの導入です。<br>
+  <br>
+  桃芭蕉実さんのgithubページに移動します。<br>
+  <a href="https://github.com/momoandbanana22/b5">https://github.com/momoandbanana22/b5</a><br>
+  <br>
+  <img src="20180506_9.jpg"><br>
+  <br>
+  "ruby_bitbankcc"というgemを導入しなければならないようです。ぽちっ<br>
+  <br>
+  <img src="20180506_A.jpg"><br>
+  <br>
+  スクロールして・・・<br>
+  "Installation"のところを確認します。<br>
+  <br>
+  <img src="20180506_B.jpg"><br>
+  <br>
+  ふむ・・・？<br>
+  とりあえずrubyを起動して打ち込んでみましょうか。<br>
+  <br>
+  <img src="20180506_C.jpg"><br>
+  <br>
+  何も起きません。（注：初）<br>
+  <br>
+  <img src="20180506_D.jpg"><br>
+  <br>
+  とりあえずzipファイルをダウンロードして解凍してローカルにおきます。<br>
+  <br>
+  ググると"コマンドプロンプト"でおこなうとのこと。<br>
+  <br>
+  <img src="20180506_E.jpg"><br>
+  <br>
+  スタートメニューからコマンドプロンプトを実行します。<br>
+  <br>
+  <img src="20180506_F.jpg"><br>
+  <br>
+  "ruby_bitbankcc"なんて人知らない、と言われました（´・ω・｀）（注：）<br>
+  <br>
+  <img src="20180506_G.jpg"><br>
+  <br>
+  "cd"(change directory)コマンドでzipを解凍した先に移動します。<br>
+  <br>
+  <img src="20180506_H.jpg"><br>
+  <br>
+  "gem 'ruby_bitbankcc'"と打ち込んでもさっきと一緒・・・<br>
+  "$ gem install ruby_bitbankcc"と打ち込んでみたらこれも違うようです。（"$"はUNIX系の表示のようです。）（注）<br>
+  "gem install ruby_bitbankcc"と打ち込んでみたら・・・いけました(*'ー'*)<br>
+  <br>
+  <img src="20180506_I.jpg"><br>
+  <br>
+  このまま"kkt.rb"を起動してもすぐにwindowが閉じてしまいます。動きません。<br>
+  <br>
+  <img src="20180506_J.jpg"><br>
+  <br>
+  桃芭蕉実さんのgithubのkktページを確認します。<br>
+  bitbankからAPIキーを発行する必要があります。<br>
+  <br>
+  <img src="20180506_K.jpg"><br>
+  <br>
+  「参照」「取引」を許可して発行します。<br>
+  <br>
+  <img src="20180506_L.jpg"><br>
+  <br>
+  発行したキーをメモ帳などのエディタを使って"apikey.yaml"というファイル名で保存します。（エンコードは"UTF-8"が良いのかな？）<br>
+  <br>
+  <img src="20180506_M.jpg"><br>
+  <br>
+  再度"kkt.rb"を起動します。<br>
+  <br>
+  <img src="20180506_N.jpg"><br>
+  <br>
+  動きました！ヾ(=^▽^=)ノ<br>
+  <br>
+  <h3>XRP自動積立botの利点</h3>
+  <br>
+  XRP自動積立bot"kkt"の利点は<br>
+  １．Zaif取引所にはない"XRP"を積み立てることができる<br>
+  ２．手数料がかからない（電気代はかかる）<br>
+  ３．入金さえしていれば、すぐに開始できていつでも止められる<br>
+  ４．高値掴み防止装置があるので設定した上限価格を超えて購入しない（上限価格で指値注文になる）<br>
+  の4点でしょうか。<br>
+  また設定ファイルの中をを覗くと分かりますが通貨の種類、購入金額、注文周期、上限価格を変更するできます。<br>
+  自分に合った設定を見つけてくださいね。<br>
+  <br>
+  Let's enjoy your investment! o(*^▽^*)o~♪<br>
+  <br>
+  （おわり）<br>
+  <br>
+ </body>
+</html>
