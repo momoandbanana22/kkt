@@ -17,7 +17,7 @@ apikey: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 seckey: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ~~~
 
-なお、「Windowsでの動かし方」を、白鳥メグミさん(Twitter:@stafy_btc)がまとめてくださいました。[こちら](doc/kkt.html)をご覧ください。メグミさんありがとうございます！
+なお、「Windowsでの動かし方」を、白鳥メグミさん(Twitter:@stafy_btc)がまとめてくださいました。[こちら](https://momoandbanana22.github.io/kkt/doc/kkt.html)をご覧ください。メグミさんありがとうございます！
 
 # おわりに
 無保証です。
