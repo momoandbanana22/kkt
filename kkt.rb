@@ -269,6 +269,7 @@ BBCC = Bitbankcc.new(APIKEY['apikey'], APIKEY['seckey'])
 base_use_amount = SETTING['base_coin']['use_amount'].to_f
 base_keep_amount = SETTING['base_coin']['keep_amount'].to_f
 target_limit_price = SETTING['target_coin']['limit_price'].to_f
+program_continue = SETTING['program_continue']
 
 # main loop
 loop do
@@ -278,11 +279,20 @@ loop do
   target_price = read_target_price.to_f # api access
   base_free_amount = free_amout(BASE_COINNAME).to_f # api access
   if (base_free_amount - base_keep_amount) < base_use_amount
-    tmpstr = "#{Time.now}  残高が足りないので、プログラムを終了します。"
-    tmpstr += "(#{base_free_amount} [#{BASE_COINNAME}])"
-    LOG.info(object_id, self.class.name, __method__, tmpstr)
-    puts(tmpstr)
-    break # exit loop
+    if !program_continue
+      tmpstr = "#{Time.now}  残高が足りないので、プログラムを終了します。"
+      tmpstr += "(#{base_free_amount} [#{BASE_COINNAME}])"
+      LOG.info(object_id, self.class.name, __method__, tmpstr)
+      puts(tmpstr)
+      break # exit loop
+    else
+      tmpstr = "#{Time.now}  残高が足りないので、次のタイミングまで待ちます。"
+      tmpstr += "(#{base_free_amount} [#{BASE_COINNAME}])"
+      LOG.info(object_id, self.class.name, __method__, tmpstr)
+      puts(tmpstr)
+      save_last_trading(TARGET_COINNAME, 0, 0, 'wait')
+      redo
+    end
   end
 
   # order type and price

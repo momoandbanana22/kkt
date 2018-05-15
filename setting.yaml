@@ -15,10 +15,13 @@ bitbank_coinpair: ["btc_jpy", "xrp_jpy", "ltc_btc", "eth_btc", "mona_jpy", "mona
 base_coin:
   coin_name: "jpy"
   # 使う金額。（保持量＋売却量）以上の残高がある場合にのみ、売却量を売却する。
-  use_amount: 40  # 売却量
-  keep_amount: 0   # 保持量
+  use_amount: 50  # 売却量
+  keep_amount: 1000000000   # 保持量
 
 # ターゲットコイン：購入するコイン
 target_coin:
   coin_name: "xrp"
   limit_price:  100 # 100[xrp/jpy]を超えたら、成行買いは行わず、指値買いを行う
+
+# ベースコインが不足している場合に、継続する＝true、終了する＝false
+program_continue: true
