@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180515_1515'.freeze
+PROGRAM_VERSION = 'ver.20180515_1541'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -153,9 +153,10 @@ end
 def raw_create_order(pair, amount, price, side, type)
   res = retry_create_order(pair, amount, price, side, type)
   if res['success'] != 1
-    errstr = "BBCC.create_order() not success. code=#{res['data']['code']}"
+    errcode = res['data']['code']
+    errstr = "BBCC.create_order() not success. code=#{errcode}"
     LOG.error(object_id, self.class.name, __method__, errstr)
-    return nil
+    return errcode.to_i
   end
   res # return res
 end
@@ -249,6 +250,16 @@ def order_log_str(base_free_amount, target_price, target_amount, type)
   tmpstr # retrun tmpstr
 end
 
+def numeric?(value)
+  return(true) if value.is_a?(Numeric)
+  return(true) if Integer(value)
+  return(true) if Float(value)
+  false # return false
+rescue StandardError
+  false # return false
+end
+
+
 COINPAIR, SIDE = coinpair_and_side
 if COINPAIR.nil?
   LOG.error(
@@ -302,14 +313,22 @@ loop do
   target_amount = base_use_amount.to_f / target_price
 
   # order
-  loop do
-    break unless raw_create_order(
+  ret = nil
+  while ret.nil?
+    ret = raw_create_order(
       COINPAIR,
       target_amount,
       target_price,
       SIDE,
       type
-    ).nil?
+    )
+  end
+
+  if numeric?(ret)
+    # error code received from server
+    target_amount = 0
+    target_price = 0
+    type = "wait(#{ret})"
   end
 
   # update 'lastbuy.yaml'
