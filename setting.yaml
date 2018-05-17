@@ -16,7 +16,7 @@ base_coin:
   coin_name: "jpy"
   # 使う金額。（保持量＋売却量）以上の残高がある場合にのみ、売却量を売却する。
   use_amount: 50  # 売却量
-  keep_amount: 0   # 保持量
+  keep_amount: 10000   # 保持量
 
 # ターゲットコイン：購入するコイン
 target_coin:

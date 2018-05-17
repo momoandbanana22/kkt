@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180515_1541'.freeze
+PROGRAM_VERSION = 'ver.20180517_2128'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -282,6 +282,9 @@ base_keep_amount = SETTING['base_coin']['keep_amount'].to_f
 target_limit_price = SETTING['target_coin']['limit_price'].to_f
 program_continue = SETTING['program_continue']
 
+# return counter
+retry20001 = 0
+
 # main loop
 loop do
   wait_loop
@@ -326,6 +329,16 @@ loop do
 
   if numeric?(ret)
     # error code received from server
+    if ret == 20_001
+      if retry20001 < 10
+        # retury
+        retry20001 += 1
+        random_sleep
+        redo
+      end
+      # retury out -> wait next timming.
+      retry20001 = 0
+    end
     target_amount = 0
     target_price = 0
     type = "wait(#{ret})"
