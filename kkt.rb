@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180517_2128'.freeze
+PROGRAM_VERSION = 'ver.20180518_0028'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -337,12 +337,12 @@ loop do
         redo
       end
       # retury out -> wait next timming.
-      retry20001 = 0
     end
     target_amount = 0
     target_price = 0
     type = "wait(#{ret})"
   end
+  retry20001 = 0
 
   # update 'lastbuy.yaml'
   save_last_trading(TARGET_COINNAME, target_amount, target_price, type)
