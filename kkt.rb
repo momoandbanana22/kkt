@@ -1,5 +1,5 @@
 # kkt.rb - 'kotsukotsuto' - dollar cost averaging bot
-PROGRAM_VERSION = 'ver.20180518_0028'.freeze
+PROGRAM_VERSION = 'ver.20180518_1814'.freeze
 PROGRAM_NAME = 'kkt'.freeze
 
 # standerd library require
@@ -318,6 +318,7 @@ loop do
   # order
   ret = nil
   while ret.nil?
+    sleep(retry20001)
     ret = raw_create_order(
       COINPAIR,
       target_amount,
